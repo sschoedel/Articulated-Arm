@@ -1,3 +1,3 @@
 # Articulated-Arm
 
-A place to store all files related to my six-axis articulated robotic arm project. 
+Lists software, 3D models, and kinematic derivation
