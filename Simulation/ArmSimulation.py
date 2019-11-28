@@ -146,6 +146,8 @@ def drawArm(jointPositions, baseTransforms):
 	ax.set_zlabel("z")
 	fig.canvas.draw_idle()
 
+# First test a group of random joint changes until one group makes the end effector closer to the goal position,
+# then if no such joint angle change combinations are found quickly, check each joint change individually
 def IKTestTogether(text):
 	global thetas
 	np.set_printoptions(precision = 2)
@@ -178,18 +180,100 @@ def IKTestTogether(text):
 			if testDistance < currentDistance:
 				break
 			else:
-				numTries = numTries + 1
+				numTries += 1
+		if numTries is 50:
+			for i in range(len(thetas)):
+				testThetasCopy = thetas
+				numSingleTries = 0
+				while numSingleTries < 50:
+					testSingleChange = np.random.rand(1)  						# 0.734
+					testSingleTheta = thetas[i] + testSingleChange * rotation  	# 360 + 0.734 * rotation
+					testThetasCopy[i] = testSingleTheta							# 382copy = 382
+					# testThetasCopy = [360 382 360 360 360 360] only changing one at a time
+					currentJointPositions, baseTransforms = ForwardK.updateMatrices(testThetasCopy)[0::2]
+					currentToolPos = currentJointPositions[len(currentJointPositions)-1]
+					testDistanceSingle = np.sqrt((desiredToolPos[0] - currentToolPos[0])**2 + (desiredToolPos[1] - currentToolPos[1])**2 + (desiredToolPos[2] - currentToolPos[2])**2)
+					if testDistanceSingle < currentDistance:
+						testThetas[i] = testSingleTheta  # if distance is less replace next theta for that joint
+						break
+					else:
+						numSingleTries += 1
+				if numSingleTries is 50:
+					testThetas[i] = thetas[i]  # if distance is never less don't move theta for that joint
+
 		thetas = testThetas
-		currentDistance = testDistance
-		maxRotation = (currentDistance / initialDistance) * rotation + 1
+
+		# set new current distance
+		currentJointPositions, baseTransforms = ForwardK.updateMatrices(thetas)[0::2]
+		currentToolPos = currentJointPositions[len(currentJointPositions)-1]
+		currentDistance = np.sqrt((desiredToolPos[0] - currentToolPos[0])**2 + (desiredToolPos[1] - currentToolPos[1])**2 + (desiredToolPos[2] - currentToolPos[2])**2)
+
+		# update amount allowed to rotate
+		rotation = (currentDistance / initialDistance) * maxRotation + 1
 		print("")
 		print("maxRotation:")
-		print(maxRotation)
+		print(rotation)
 
 		drawArm(currentJointPositions, baseTransforms)
 		ax.scatter(int(x), int(y), int(z), s=70)
 		plt.pause(.005)
 
+# Change by a set number of degrees in each direction and take whichever one, if either, gives smaller distance
+# update entire arm after each joint moves instead of after all joints have changed
+# This works pretty well but is jittery near the end
+def IKTestAtLeastOne(text):
+	global thetas
+	np.set_printoptions(precision = 2)
+	# draw specified point
+	x, y, z = text.split(" ")
+	print("x: {}, y: {}, z: {}".format(x, y, z))
+	desiredToolPos = np.array([int(x), int(y), int(z)])
+
+	# initial values and random theta directions
+	maxRotation = 5  # specifies max degrees any joint is allowed to change by in a single frame
+	rotation = maxRotation
+	thresholdDistance = 50  # how precise we want to be
+	initialThetas = thetas
+	currentToolPos = ForwardK.getEndEffectorData(initialThetas)[0]  # initial position
+	currentDistance = np.sqrt((desiredToolPos[0] - currentToolPos[0])**2 + (desiredToolPos[1] - currentToolPos[1])**2 + (desiredToolPos[2] - currentToolPos[2])**2)  # initial distance
+	initialDistance = currentDistance
+	testDistance = 0
+
+	while currentDistance > thresholdDistance:
+		noChange = np.full(6, False)
+		for i in range(0, 3):
+			thetasCopyAdd = np.copy(thetas)  # these arrays of thetas reset for each joint to evaluate each angle individually
+			thetasCopySub = np.copy(thetas)
+			thetasCopyAdd[i] += 5
+			thetasCopySub[i] -= 5
+
+			testDistanceAdd = getToolPositionDistance(thetasCopyAdd, desiredToolPos)[1]
+			if testDistanceAdd < currentDistance:
+				thetas[i] = thetasCopyAdd[i]
+			else:
+				testDistanceSub = getToolPositionDistance(thetasCopySub, desiredToolPos)[1]
+				if testDistanceSub < currentDistance:
+					thetas[i] = thetasCopySub[i]
+				else:
+					noChange[i] = True
+
+		# set new current distance and update canvas with new joint positions
+		currentJointPositions, baseTransforms = ForwardK.updateMatrices(thetas)[0::2]
+		currentToolPos = currentJointPositions[len(currentJointPositions)-1]
+		currentDistance = np.sqrt((desiredToolPos[0] - currentToolPos[0])**2 + (desiredToolPos[1] - currentToolPos[1])**2 + (desiredToolPos[2] - currentToolPos[2])**2)
+
+		# update amount allowed to rotate
+		rotation = ((currentDistance / initialDistance) * maxRotation)**2 + 1
+		print("")
+		print("current Distance:")
+		print(currentDistance)
+
+		drawArm(currentJointPositions, baseTransforms)
+		ax.scatter(int(x), int(y), int(z), s=70)
+		plt.pause(.005)
+
+
+# Test each joint change and update weights based on how each change effects the goal position distance
 def IKTestIndividual(text):	
 	global thetas
 	np.set_printoptions(precision = 2)
@@ -257,11 +341,15 @@ def IKTestIndividual(text):
 		# test if end effector is close enough to desired position
 		# stop if true
 
+def getToolPositionDistance(thetas, desiredToolPos):
+		currentToolPos = ForwardK.getEndEffectorData(thetas)[0]
+		currentDistance = np.sqrt((desiredToolPos[0] - currentToolPos[0])**2 + (desiredToolPos[1] - currentToolPos[1])**2 + (desiredToolPos[2] - currentToolPos[2])**2)
+		return currentToolPos, currentDistance
 
 def runToPosition(text):
 	# IKTestIndividual(text)
-	IKTestTogether(text)
-
+	# IKTestTogether(text)
+	IKTestAtLeastOne(text)
 
 # Slider and button updates
 sliderTheta1.on_changed(updateFromSlider)
