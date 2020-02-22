@@ -1,0 +1,82 @@
+yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyFormat:
+
+transformation matrix from base to end effector - Tbe
+	
+	     input side 			output side for forward equations
+Tbe =	[r11 r12 r13 px] = [f11(t1, t2,...tn), f12(t1, t2,...tn), f13(t1, t2,...tn), etc]
+	[r21 r22 r23 py]   [same			same 		same 	  same  ]
+	[r31 r32 r33 pz]   [same]
+	[ 0   0   0   1]   [0  0  0  1]
+
+Goal here: reverse the forward equations so that there are six equations in terms of alpha, beta, and
+gamma rotaitons and x, y, and z positions
+
+rotation matrix reduces to 3 useful equations, so 6 equations and 6 variables in total
+
+everything on the input side is given (rotation matrix determined from input rotations)
+
+
+From sympy:
+
+r11 = cT5*(cT4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3) - sT4*(-cT0*cT1*sT2 - cT0*cT2*sT1)) + sT5*(cT3*sT0 - cT3*(cT0*cT1*cT2 - cT0*sT1*sT2))
+r12 = cT5*(cT3*sT0 - cT3*(cT0*cT1*cT2 - cT0*sT1*sT2)) - sT5*(cT4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3) - sT4*(-cT0*cT1*sT2 - cT0*cT2*sT1))
+r13 = cT4*(-cT0*cT1*sT2 - cT0*cT2*sT1) + sT4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3)
+
+r21 = cT5*(cT4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) - sT4*(-cT1*sT0*sT2 - cT2*sT0*sT1)) + sT5*(-cT0*cT3 - cT3*(cT1*cT2*sT0 - sT0*sT1*sT2))
+r22 = cT5*(-cT0*cT3 - cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) - sT5*(cT4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) - sT4*(-cT1*sT0*sT2 - cT2*sT0*sT1))
+r23 = cT4*(-cT1*sT0*sT2 - cT2*sT0*sT1) + sT4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2))
+
+r31 = -cT3*sT5*(-cT1*sT2 - cT2*sT1) + cT5*(cT3*cT4*(-cT1*sT2 - cT2*sT1) - sT4*(-cT1*cT2 + sT1*sT2))
+r32 = -cT3*cT5*(-cT1*sT2 - cT2*sT1) - sT5*(cT3*cT4*(-cT1*sT2 - cT2*sT1) - sT4*(-cT1*cT2 + sT1*sT2))
+r33 = cT3*sT4*(-cT1*sT2 - cT2*sT1) + cT4*(-cT1*cT2 + sT1*sT2)
+
+px = cT0*cT1*xOff2 - cT0*sT1*yOff2 + cT0*xOff1 - sT0*yOff1 - sT0*zOff2 - sT0*zOff3 + xOff0 + xOff3*(cT0*cT1*cT2 - cT0*sT1*sT2) + xOff4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3) + xOff5*(cT4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3) - sT4*(-cT0*cT1*sT2 - cT0*cT2*sT1)) + yOff3*(-cT0*cT1*sT2 - cT0*cT2*sT1) + yOff4*(cT3*sT0 - cT3*(cT0*cT1*cT2 - cT0*sT1*sT2)) + yOff5*(-cT4*(-cT0*cT1*sT2 - cT0*cT2*sT1) - sT4*(cT3*(cT0*cT1*cT2 - cT0*sT1*sT2) + sT0*sT3)) + zOff4*(-cT0*cT1*sT2 - cT0*cT2*sT1) + zOff5*(cT3*sT0 - cT3*(cT0*cT1*cT2 - cT0*sT1*sT2))
+py = cT0*yOff1 + cT0*zOff2 + cT0*zOff3 + cT1*sT0*xOff2 - sT0*sT1*yOff2 + sT0*xOff1 + xOff3*(cT1*cT2*sT0 - sT0*sT1*sT2) + xOff4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) + xOff5*(cT4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) - sT4*(-cT1*sT0*sT2 - cT2*sT0*sT1)) + yOff0 + yOff3*(-cT1*sT0*sT2 - cT2*sT0*sT1) + yOff4*(-cT0*cT3 - cT3*(cT1*cT2*sT0 - sT0*sT1*sT2)) + yOff5*(-cT4*(-cT1*sT0*sT2 - cT2*sT0*sT1) - sT4*(-cT0*sT3 + cT3*(cT1*cT2*sT0 - sT0*sT1*sT2))) + zOff4*(-cT1*sT0*sT2 - cT2*sT0*sT1) + zOff5*(-cT0*cT3 - cT3*(cT1*cT2*sT0 - sT0*sT1*sT2))
+pz = -cT1*yOff2 + cT3*xOff4*(-cT1*sT2 - cT2*sT1) - cT3*yOff4*(-cT1*sT2 - cT2*sT1) - cT3*zOff5*(-cT1*sT2 - cT2*sT1) - sT1*xOff2 + xOff3*(-cT1*sT2 - cT2*sT1) + xOff5*(cT3*cT4*(-cT1*sT2 - cT2*sT1) - sT4*(-cT1*cT2 + sT1*sT2)) + yOff3*(-cT1*cT2 + sT1*sT2) + yOff5*(-cT3*sT4*(-cT1*sT2 - cT2*sT1) - cT4*(-cT1*cT2 + sT1*sT2)) + zOff0 + zOff1 + zOff4*(-cT1*cT2 + sT1*sT2)
+
+
+Or, take this strategy:
+
+back up from the end effector to the wrist (Tbw = transformation matrix from base to wrist
+Tbw = Tbe * Twe^-1
+
+Where Twe^-1 = [[1, 0, 0, -xTpos], [0, 1, 0, -yTpos], [0, 0, 1, -zTpos], [0, 0, 0, 1]]
+Example:
+	x, y, z, alpha, beta, gamma are given
+	This gives the result of Tbe (transform base to end effector)
+	find xW, yW, zW (x, y, z of wrist) by backing up from end effector using known end effector length and given rotations
+
+Treat first three axes as positioning and final three as rotation
+
+
+
+
+
+backing up from given x, y, z and rotations:
+xyz rotation matrices:
+x = [ 1   0   0   ]
+    [ 0   ca  -sa ]
+    [ 0   sa   ca ]
+y = [ cb   0   sb ]
+    [ 0   1    0  ]
+    [-sb   0   cb ]
+z = [ cg  -sg  0  ]
+    [ sg   cg  0  ]
+    [ 0    0   1  ]
+x*y*z = [cB*cG, -cB*sG, sB]
+	[cA*sG + cG*sA*sB, cA*cG - sA*sB*sG, -cB*sA]
+	[-cA*cG*sB + sA*sG, cA*sB*sG + cG*sA, cA*cB]
+
+tBack  = [cB*cG		   , -cB*sG          , sB    , xTpos]
+	 [cA*sG + cG*sA*sB , cA*cG - sA*sB*sG, -cB*sA, yTpos]
+	 [-cA*cG*sB + sA*sG, cA*sB*sG + cG*sA, cA*cB , zTpos]
+	 [0                , 0               , 0     , 1    ]
+
+endPosition = [x]
+	      [y]
+	      [z]
+	      [1]
+wristPosition = tBack * endPosition
+
+
+
