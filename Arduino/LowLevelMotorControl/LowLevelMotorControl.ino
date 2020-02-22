@@ -21,6 +21,7 @@
 
 // Variables for encoders
 double currentThetas[6];
+float currentPositions[6] = {0, 0, 0, 0, 0, 0};
 long revolutions[6] = {0, 0, 0, 0, 0, 0};   // number of revolutions the encoder has made
 double raw[6] = {0, 0, 0, 0, 0, 0};    // the calculated value the encoder is at
 double lastRaw[6] = {0, 0, 0, 0, 0, 0};
@@ -34,9 +35,11 @@ long ratio[6] = {1, 1, 1, 20 * 1.484, 50, 1}; // gear ratios for each axis
 // thetas to nano for evaluation
 // Naming convention: Thetas means radians, positions means steps
 float goalThetas[6] = {0, 0, 0, 0, 0, 0};
+long goalPositions[6] = {0, 0, 0, 0, 0, 0};
 String cmd[MAX_CMDS] = {};
 bool debugging = true;
 bool debuggingEncoders = false;
+bool newCmd = false;
 
 AccelStepper stepper1(AccelStepper::DRIVER, 43, 42);
 AccelStepper stepper2(AccelStepper::DRIVER, 49, 48);
@@ -50,12 +53,14 @@ AS5600 encoder;
 
 
 // Function declarations
-void readCommand();
+bool readCommand();
 void parseCommand();
 void updateGoalAngles();
 void setupMotors();
 void readEncoders();
 void tcaselect(uint8_t i);
+void setAllMotorPos();
+void stopMotors();
 
 
 void setup() {
@@ -67,8 +72,31 @@ void setup() {
 
 
 void loop() {
-  readCommand();
-  parseCommand();
+  newCmd = readCommand();
+  if (newCmd)
+  {
+    parseCommand();
+    if (debugging) { 
+      Serial.print("Updated goal positions: ");
+      for(int i=0; i<5; i++){Serial.print(goalPositions[i]);Serial.print(", ");}
+      Serial.print(goalPositions[5]);
+      Serial.print("\n");
+    }
+  }
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
+  steppers.run();  // step once
   steppers.run();  // step once
   readEncoders();
   returnData();
@@ -79,13 +107,15 @@ void loop() {
 
 
 
-void readCommand()
+bool readCommand()
 {
+  int newCommand = false;
   if (Serial.available() > 0)
   {
+    newCommand = true;
     String message = Serial.readStringUntil('\n');
     if (debugging) {
-      Serial.println("New command received");
+      Serial.print("New command received: ");
     }
 
     // Return number of words in full command
@@ -127,6 +157,7 @@ void readCommand()
       cmd[i].toLowerCase();
     }
   }
+  return newCommand;
 }
 
 int determine_num_cmds(String message)
@@ -151,15 +182,9 @@ void parseCommand()
   {
     if (cmd[1] == "goal")
     {
-      if (cmd[1] == "all")
+      if (cmd[2] == "all")
       {
-        // Updates goal thetas
-        goalThetas[0] = cmd[2].toInt();
-        goalThetas[1] = cmd[3].toInt();
-        goalThetas[2] = cmd[4].toInt();
-        goalThetas[3] = cmd[5].toInt();
-        goalThetas[4] = cmd[6].toInt();
-        goalThetas[5] = cmd[7].toInt();
+        setAllMotorsPos();
       }
     }
   }
@@ -180,13 +205,38 @@ void parseCommand()
       }
     }
   }
-  else if (cmd[0] == "eStop")
+  else if (cmd[0] == "stop")
   {
-    for (int i = 0; i < 6; i++)
-    {
-      goalThetas[i] = currentThetas[i];
-    }
+    if (debugging) { Serial.println("STOPPING"); }
+    stopMotors();
   }
+}
+
+void setAllMotorsPos()
+{
+  // Updates goal thetas and positions
+  goalThetas[0] = cmd[3].toFloat() * ratio[3];
+  goalThetas[1] = cmd[4].toFloat() * ratio[4];
+  goalThetas[2] = cmd[5].toFloat() * ratio[5];
+  goalThetas[3] = cmd[6].toFloat() * ratio[0];
+  goalThetas[4] = cmd[7].toFloat() * ratio[1];
+  goalThetas[5] = cmd[8].toFloat() * ratio[2];
+  for(int i=0; i<6; i++)
+  {
+    goalPositions[i] = goalThetas[i] * 4096/(2*M_PI);
+  }
+  steppers.moveTo(goalPositions);
+}
+
+void stopMotors()
+{
+  goalPositions[0] = stepper1.currentPosition();
+  goalPositions[1] = stepper2.currentPosition();
+  goalPositions[2] = stepper3.currentPosition();
+  goalPositions[3] = stepper4.currentPosition();
+  goalPositions[4] = stepper5.currentPosition();
+  goalPositions[5] = stepper6.currentPosition();
+  steppers.moveTo(goalPositions);
 }
 
 
@@ -203,7 +253,8 @@ void readEncoders() {
     if ((lastRaw[i] - raw[i]) < -2047 )  // Encoder value goes from 0 to max
       revolutions[i]--;
 
-    currentThetas[i] = ((revolutions[i] * 4096 + raw[i]) / ratio[i]) * (2 * M_PI / 4096); // Calculate scaled currentThetas in radians
+    currentPositions[i] = (revolutions[i] * 4096 + raw[i]);
+    currentThetas[i] = (currentPositions[i]/ ratio[i]) * (2 * M_PI / 4096); // Calculate scaled currentThetas in radians
 
     lastRaw[i] = raw[i];
   }
