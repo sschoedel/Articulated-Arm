@@ -112,5 +112,7 @@ def updateMatrices(theta):
 	jointRotationMatrices = np.array([baseTransforms[i,:-1,:-1] for i in range(0, baseTransforms.shape[0])])
 	return jointPositions, jointRotationMatrices, baseTransforms
 
+print(updateMatrices(np.array([0,0,0,0,0,0]))[0])
+
 if __name__ == '__main__':
 	pass

@@ -21,3 +21,11 @@ except KeyboardInterrupt as kbi_error:
 	print(kbi_error)
 	ser.close()
 	print("{} closed".format(port))
+
+while True:
+	# Check input from 
+	# Get image from camera
+	# Process image
+	# Update end position OR calculate new thetas with image and sensor data
+	# Calculate thetas for new position if new position updated and thetas not updated
+	# Send new thetas to teensy/ard
