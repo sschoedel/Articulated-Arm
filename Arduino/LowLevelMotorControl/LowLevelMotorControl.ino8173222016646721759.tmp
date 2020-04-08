@@ -44,20 +44,10 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 #include <AS5600.h>
-#include <RH_NRF24.h>
 
 #define TCAADDR 0x70
 
 #define MAX_CMDS 64
-
-// arm geometry constants in mm:
-long len1 = 300;
-long len2 = len1;
-int h1 = 135;
-
-//                     motors 1 2 3 4 5 6
-float startingDegrees[6] = {0, 90, 8, 0, 0, 0};
-long stepsPerRev[6] = {48000, 312000, 15200, 0, 0, 0};
 
 // Interrupt constants
 const uint16_t t1_load = 0;
@@ -71,16 +61,12 @@ long _lsb;
 long _msbMask = 0b00001111;
 int _AS5600Address = 0x36;
   
-double encoderThetasRads[6];
-double encoderThetasDegrees[6];
+double encoderThetas[6];
 float currentPositions[6] = {0, 0, 0, 0, 0, 0};
 long revolutions[6] = {0, 0, 0, 0, 0, 0};   // number of revolutions the encoder has made
 double raw[6] = {0, 0, 0, 0, 0, 0};    // the calculated value the encoder is at
 double lastRaw[6] = {0, 0, 0, 0, 0, 0};
-
-//            motors 4 5 6 1 2 3
-long ratio[6] = {1, 1, 1, 29.68, 50, 1}; // gear ratios for each axis
-int encoderOffsetsDegrees[6] = {0, 0, 0, 0, 90, -10};
+long ratio[6] = {1, 1, 1, 20 * 1.484, 50, 1}; // gear ratios for each axis
 // tcaselect reads encoders in the following order, by axis: _ _ _ 1 2 3
 
 
@@ -93,7 +79,7 @@ float goalThetas[6] = {0, 0, 0, 0, 0, 0};
 long goalPositions[6] = {0, 0, 0, 0, 0, 0};
 String cmd[MAX_CMDS] = {};
 bool debugging = true;
-bool debuggingEncoders = false;
+bool debuggingEncoders = true;
 bool newCmd = false;
 
 AccelStepper stepper1(AccelStepper::DRIVER, 43, 42);
@@ -105,7 +91,6 @@ AccelStepper stepper6(AccelStepper::DRIVER, 39, 38);
 MultiStepper steppers;
 //readSensors sensors(false);
 AS5600 encoder;
-RH_NRF24 nrf24;
 
 
 // Function declarations
@@ -117,25 +102,14 @@ void readEncoders();
 void tcaselect(uint8_t i);
 void setAllMotorPos();
 void stopMotors();
-void setGoalLoc();
-void setGoalPos();
 
-void checkNRF();
+
 
 void setup() {
   // Serial, i2c, and motor setup
   Serial.begin(115200);
-  pinMode(13, OUTPUT);
   Wire.begin();
   setupMotors();
-
-  while (!Serial);
-  if (!nrf24.init())
-    Serial.println("initialization failed");                           
-  if (!nrf24.setChannel(1))
-    Serial.println("Channel Set failed");
-  if (!nrf24.setRF(RH_NRF24::DataRate2Mbps, RH_NRF24::TransmitPower0dBm))
-    Serial.println("RF set failed");    
 
 
   // Interrupt setup
@@ -160,19 +134,19 @@ void setup() {
 
 
 // Interrupt service routine
-ISR(TIMER1_COMPA_vect) { // Whenever clock value register matches compa register
+ISR(TIMER1_COMPA_vect) { // Whenever clock matches compa
 }
 
 void loop()
 {
-  checkNRF();
   newCmd = readCommand();
   if (newCmd)
   {
     parseCommand();
   }
-
-  steppers.run();  // no acceleration
+  int a,b,g,x,y,z = 1,2,3,4,5,6;
+  kinematics(a, b, g, x, y, z);
+  steppers.run();
   
 //  readEncoders();   // MAKES STEPPERS RUN TOO SLOW. Try again using teensy. Teensy might be be able to loop fast enough that readEncoders lag doesn't matter
 //  returnData();
@@ -182,33 +156,11 @@ void loop()
 //  Serial.flush(); // waits for serial data to send  - MAKES STEPPERS RUN MUCH SLOWER
 }
 
-void checkNRF()
-{
-  if (nrf24.available())
-  {
-    uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
-    uint8_t len = sizeof(buf);
-    if(nrf24.recv(buf, &len))
-    {
-      Serial.print("Received: ");
-      Serial.println((char*)buf);
-      String data=String((char*)buf);
+//void kinematics()
+//{
+//  Serial.println("kinematics");
+//}
 
-      if (data == "on")
-      {
-        digitalWrite(13, HIGH);
-      }
-      else if (data == "off")
-      {
-        digitalWrite(13, LOW);
-      }
-    }
-    else
-    {
-      Serial.println("recv failed");
-    }
-  }
-}
 
 
 bool readCommand()
@@ -287,18 +239,6 @@ void parseCommand()
   {
     setAllMotorsPos();
   }
-  else if (cmd[0] == "gloc")
-  {
-    setGoalLoc();
-  }
-  else if (cmd[0] == "gpos")
-  {
-    setGoalPos();
-  }
-  else if (cmd[0] == "home")
-  {
-    homeMotors();
-  }
   else if (cmd[0] == "pgoalthetas")
   {
     printGoalThetas();
@@ -352,53 +292,6 @@ void setAllMotorsPos()
 //  steppers.runSpeedToPosition(); // this blocks but might work if using fine enough waypoints between two positions to allow for data transfer between Nano and Teensy
 }
 
-void setGoalLoc()
-{
-  float x = cmd[1].toFloat();
-  float y = cmd[2].toFloat();
-  float z = cmd[3].toFloat();
-  float a = cmd[4].toFloat();
-  float b = cmd[5].toFloat();
-  float g = cmd[6].toFloat();
-  if(sqrt(sq(x) + sq(y) + sq(z-130)) <= len1 + len2)
-  {
-    kinematics(x, y, z, a, b, g);
-  }
-  else
-  {
-    Serial.println("not in range");
-  }
-}
-
-void setGoalPos()
-{
-  goalPositions[0] = cmd[1].toInt();
-  goalPositions[1] = cmd[2].toInt();
-  goalPositions[2] = cmd[3].toInt();
-  goalPositions[3] = cmd[4].toInt();
-  goalPositions[4] = cmd[5].toInt();
-  goalPositions[5] = cmd[6].toInt();
-  
-  if (debugging) { 
-    Serial.print("Updated goal positions: ");
-    for(int i=0; i<5; i++){Serial.print(goalPositions[i]);Serial.print(", ");}
-    Serial.print(goalPositions[5]);
-    Serial.print("\n");
-  }
-  
-  steppers.moveTo(goalPositions);
-}
-
-void homeMotors()
-{
-  float startingDegrees[6] = {0, 90, 8, 0, 0, 0};
-  for(int i=0;i<6;i++)
-  {
-    goalPositions[i] = startingDegrees[i] * stepsPerRev[i]/360;
-  }
-  steppers.moveTo(goalPositions);
-}
-
 void printGoalThetas()
 {
   Serial.print("Goal thetas: ");
@@ -411,19 +304,12 @@ void printGoalThetas()
 
 void printEncoderThetas()
 {
-  Serial.print("Thetas tracked by encoders (radians): ");
+  Serial.print("Thetas tracked by encoders: ");
   for (int i = 0; i < 5; i++)
   {
-    Serial.print(encoderThetasRads[i]); Serial.print(", ");
+    Serial.print(encoderThetas[i]); Serial.print(", ");
   }
-  Serial.println(encoderThetasRads[5]);
-  Serial.print('\n');
-  Serial.print("Thetas tracked by encoders (degrees): ");
-  for (int i = 0; i < 5; i++)
-  {
-    Serial.print(encoderThetasDegrees[i]); Serial.print(", ");
-  }
-  Serial.println(encoderThetasDegrees[5]);
+  Serial.println(encoderThetas[5]);
 }
 
 void printStepperThetas()
@@ -477,7 +363,10 @@ void readEncoders() {
   for (int i = 2; i < 8; i++)
   {
     tcaselect(i);
-    raw[i - 2] = encoder.getPosition(); // Get the absolute position of the encoder
+    steppers.run();
+//    raw[i - 2] = encoder.getPosition(); // Get the absolute position of the encoder
+//    raw[i - 2] = _getRegisters2(_RAWANGLEAddressMSB, _RAWANGLEAddressLSB);
+
     // Check if a full rotation has been made
     if ((lastRaw[i] - raw[i]) > 2047 )   // Encoder value goes from max to 0
       revolutions[i]++;
@@ -485,17 +374,9 @@ void readEncoders() {
       revolutions[i]--;
 
     currentPositions[i] = (revolutions[i] * 4096 + raw[i]);
-    encoderThetasRads[i] = (currentPositions[i]/ ratio[i]) * (2 * M_PI / 4096); // Calculate scaled encoderThetas in radians
-    encoderThetasDegrees[i] = encoderThetasRads[i] * 180 / M_PI; // Calculate scaled encoderThetas in degrees
+    encoderThetas[i] = (currentPositions[i]/ ratio[i]) * (2 * M_PI / 4096); // Calculate scaled encoderThetas in radians
 
     lastRaw[i] = raw[i];
-  }
-
-  // Add theta offsets to each joint angle
-  for(int i=0;i<6;i++)
-  {
-    encoderThetasDegrees[i] += encoderOffsetsDegrees[i];
-    encoderThetasRads[i] += encoderOffsetsDegrees[i] * M_PI / 180;
   }
 
   if (debuggingEncoders)
@@ -503,7 +384,7 @@ void readEncoders() {
     // Print all encoder values
     for (int i = 0; i < 6; i++)
     {
-      Serial.print(encoderThetasDegrees[i]); Serial.print(", ");
+      Serial.print(encoderThetas[i]); Serial.print(", ");
     }
     Serial.print("\n");
   }
@@ -575,20 +456,12 @@ void setupMotors()
   stepper5.setAcceleration(max_accel);
   stepper6.setAcceleration(max_accel);
 
-  // Starting thetas
-  // TODO: Update starting thetas from encoder values
-  stepper1.setCurrentPosition(startingDegrees[0] * stepsPerRev[0]/360);
-  stepper2.setCurrentPosition(startingDegrees[1] * stepsPerRev[1]/360);
-  stepper3.setCurrentPosition(startingDegrees[2] * stepsPerRev[2]/360);
-  stepper4.setCurrentPosition(startingDegrees[3] * stepsPerRev[3]/360);
-  stepper5.setCurrentPosition(startingDegrees[4] * stepsPerRev[4]/360);
-  stepper6.setCurrentPosition(startingDegrees[5] * stepsPerRev[5]/360);
-//  stepper1.setCurrentPosition(0);
-//  stepper2.setCurrentPosition(0);
-//  stepper3.setCurrentPosition(0);
-//  stepper4.setCurrentPosition(0);
-//  stepper5.setCurrentPosition(0);
-//  stepper6.setCurrentPosition(0);
+  stepper1.setCurrentPosition(0);
+  stepper2.setCurrentPosition(0);
+  stepper3.setCurrentPosition(0);
+  stepper4.setCurrentPosition(0);
+  stepper5.setCurrentPosition(0);
+  stepper6.setCurrentPosition(0);
 
   steppers.addStepper(stepper1);
   steppers.addStepper(stepper2);

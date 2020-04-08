@@ -1,9 +1,11 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 #include <Adafruit_NeoPixel.h>
+#include <AS5600.h>
  
 #define PIN 6
 #define MAX_BUF 64
+#define TCAADDR 0x70
 
 AccelStepper stepper1(AccelStepper::DRIVER, 43, 42);
 AccelStepper stepper2(AccelStepper::DRIVER, 49, 48);
@@ -11,6 +13,7 @@ AccelStepper stepper3(AccelStepper::DRIVER, 47, 46);
 AccelStepper stepper4(AccelStepper::DRIVER, 41, 40);
 AccelStepper stepper5(AccelStepper::DRIVER, 45, 44);
 AccelStepper stepper6(AccelStepper::DRIVER, 39, 38);
+AS5600 encoder;
 
 Adafruit_NeoPixel ring = Adafruit_NeoPixel(24, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -22,6 +25,25 @@ void moveto();
 void updateGoalPos(long &target, int dir);
 
 String cmd[MAX_BUF];
+
+// Variables for encoders
+bool debuggingEncoders = true;
+
+byte _RAWANGLEAddressMSB = 0x0C;
+byte _RAWANGLEAddressLSB = 0x0D;
+long _msb;
+long _lsb;
+long _msbMask = 0b00001111;
+int _AS5600Address = 0x36;
+  
+double encoderThetasRads[6];
+double encoderThetasDegrees[6];
+float currentPositions[6] = {0, 0, 0, 0, 0, 0};
+long revolutions[6] = {0, 0, 0, 0, 0, 0};   // number of revolutions the encoder has made
+double raw[6] = {0, 0, 0, 0, 0, 0};    // the calculated value the encoder is at
+double lastRaw[6] = {0, 0, 0, 0, 0, 0};
+long ratio[6] = {1, 1, 1, 20 * 1.484, 50, 1}; // gear ratios for each axis
+int encoderOffsetsDegrees[6] = {0, 0, 0, 0, 90, -10};
 
 MultiStepper motors;
 
@@ -111,8 +133,9 @@ void loop() {
     }
     else
     {
-      Serial.println("No such command");
+      Serial.println("Invalid command");
     }
+    
     // set new positions
     stepper1.moveTo(motor1Target);
     stepper2.moveTo(motor2Target);
@@ -131,7 +154,7 @@ void loop() {
     
     Serial.println("Done");
   }
-
+  readEncoders();
   // targetPosition() most recent target position
   // stop()
   // runToNewPosition(long position) accel/decel
@@ -152,6 +175,56 @@ void loop() {
     Serial.print("\n");
     checkCommand(cmd);
   }*/
+}
+
+void readEncoders() {
+  for (int i = 2; i < 8; i++)
+  {
+    tcaselect(i);
+    raw[i - 2] = encoder.getPosition(); // Get the absolute position of the encoder
+    // Check if a full rotation has been made
+    if ((lastRaw[i] - raw[i]) > 2047 )   // Encoder value goes from max to 0
+      revolutions[i]++;
+    if ((lastRaw[i] - raw[i]) < -2047 )  // Encoder value goes from 0 to max
+      revolutions[i]--;
+
+    currentPositions[i] = (revolutions[i] * 4096 + raw[i]);
+    encoderThetasRads[i] = (currentPositions[i]/ ratio[i]) * (2 * M_PI / 4096); // Calculate scaled encoderThetas in radians
+    encoderThetasDegrees[i] = encoderThetasRads[i] * 180 / M_PI; // Calculate scaled encoderThetas in degrees
+
+    lastRaw[i] = raw[i];
+  }
+
+  // Add theta offsets to each joint angle
+  for(int i=0;i<6;i++)
+  {
+    encoderThetasDegrees[i] += encoderOffsetsDegrees[i];
+    encoderThetasRads[i] += encoderOffsetsDegrees[i] * M_PI / 180;
+  }
+
+  if (debuggingEncoders)
+  {
+    // Print all encoder values
+    for (int i = 0; i < 6; i++)
+    {
+      Serial.print(encoderThetasDegrees[i]); Serial.print(", ");
+    }
+    Serial.print("\n");
+    for (int i = 0; i < 6; i++)
+    {
+      Serial.print(currentPositions[i]); Serial.print(", ");
+    }
+    Serial.print("\n");
+  }
+}
+
+// tcaselect reads encoders in the following order, by axis: _ _ _ 1 2 3
+void tcaselect(uint8_t i) {
+  if (i > 7) return;
+
+  Wire.beginTransmission(TCAADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();
 }
 
 void updateGoalPos(long &target, int dir) // dir is 1 for CW, -1 for CCW
