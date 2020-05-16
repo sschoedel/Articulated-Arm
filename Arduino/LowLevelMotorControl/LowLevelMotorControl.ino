@@ -53,11 +53,13 @@
 // arm geometry constants in mm:
 long len1 = 300;
 long len2 = len1;
+long currentToolLen = 54; // two finger gripper
+long len3 = 83 + currentToolLen;
 int h1 = 135;
 
 //                     motors 1 2 3 4 5 6
-float startingDegrees[6] = {0, 90, 8, 0, 0, 0};
-long stepsPerRev[6] = {48000, 312000, 15200, 0, 0, 0};
+float startingDegrees[6] = {0, 90, 8, 0, -12, 0};
+long stepsPerRev[6] = {48000, 312000, 15200, 5720, 10280, 4150};
 
 // Interrupt constants
 const uint16_t t1_load = 0;
@@ -86,9 +88,7 @@ int encoderOffsetsDegrees[6] = {0, 0, 0, 0, 90, -10};
 
 // Other globals
 
-// Nano sends theta values to arduino, arduino turns them into goal positions in steps and returns current
-// thetas to nano for evaluation
-// Naming convention: Thetas means radians, positions means steps
+// Thetas means radians, positions means steps
 float goalThetas[6] = {0, 0, 0, 0, 0, 0};
 long goalPositions[6] = {0, 0, 0, 0, 0, 0};
 String cmd[MAX_CMDS] = {};
@@ -554,12 +554,10 @@ void returnData()
   // send 6 encoder values, 6 current position values
 }
 
-
-
 void setupMotors()
 {
   int max_accel = 5000;
-  int max_speed = 2000;
+  int max_speed = 200000;
   
   stepper1.setMaxSpeed(max_speed);
   stepper2.setMaxSpeed(max_speed);
