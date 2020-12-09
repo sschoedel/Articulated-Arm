@@ -279,7 +279,7 @@ int determine_num_cmds(String message)
 
 
 // Most of these are for debugging.
-// Nano sends goal position and stop
+// Nano only needs to send goal position, stop, and home
 
 void parseCommand()
 {
@@ -397,6 +397,8 @@ void homeMotors()
     goalPositions[i] = startingDegrees[i] * stepsPerRev[i]/360;
   }
   steppers.moveTo(goalPositions);
+  
+  Serial.println("Returning to home");
 }
 
 void printGoalThetas()
