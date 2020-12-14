@@ -1,5 +1,3 @@
-<<<<<<< HEAD
+*/*/env
 *.pyc
-=======
-
->>>>>>> master
+./.vscode/

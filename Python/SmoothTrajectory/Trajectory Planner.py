@@ -119,7 +119,7 @@ def drawTrail(jointPositions):
 	diffx = int(abs(prevEndPosition[0] - currentEndPosition[0]))
 	diffy = int(abs(prevEndPosition[1] - currentEndPosition[1]))
 	diffz = int(abs(prevEndPosition[2] - currentEndPosition[2]))
-	if diffx is not 0 and diffy is not 0 and diffz is not 0:
+	if diffx != 0 and diffy != 0 and diffz != 0:
 		trail = np.append(trail, [currentEndPosition], axis=0)
 		prevEndPosition = currentEndPosition
 	ax.scatter(trail[:,0], trail[:,1], trail[:,2], s=10, color="orange")
@@ -148,7 +148,7 @@ def start(text):
 	thetaend = np.zeros(6)
 	trail = np.empty([1,3])
 
-def changeN(text):
+def changeNum(text):
 	global N
 	N = int(text)
 
@@ -162,6 +162,6 @@ def changeGoalPosition(text):
 
 xyzInputText.on_submit(changeGoalPosition)
 drawTrajectory.on_clicked(start)
-changeNText.on_submit(changeN)
+changeNText.on_submit(changeNum)
 
 plt.show()
