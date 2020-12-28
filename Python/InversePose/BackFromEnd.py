@@ -35,8 +35,9 @@ transformEndSwSym = sym.Matrix([[1, 0, 0, 0],
 							[0, 0, 0, 1]])
 
 transform0SwSym = transform0EndSym * transformEndSwSym
-print(transform0SwSym)
-print("")
+# print(transform0EndSym)
+# print(transform0SwSym)
+# print("")
 lenEnd = 60
 x = 400
 y = 350
@@ -54,6 +55,11 @@ transformEndSw = np.array([[1, 0, 0, 0],
 						  [0, 0, 0, 1]])
 transform0Sw = transform0End @ transformEndSw
 
-print(transform0Sw)
+# print(transform0Sw)
 sphericalPos = np.vstack(transform0Sw[:-1,3])
-print(sphericalPos)
+# print(sphericalPos)
+
+
+
+
+

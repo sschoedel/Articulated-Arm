@@ -1,8 +1,10 @@
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 from matplotlib.widgets import Slider, Button, TextBox
 import ForwardKinematics as ForwardK
+import matrixHelpers as mh
 
 plt.style.use('seaborn-whitegrid')
 
@@ -10,16 +12,41 @@ numRotations = 2
 
 
 # Define robot geometry
-r1 = 47
-r2 = 110
-r3 = 26
-d1 = 133
+# r1 = 47
+# r2 = 110
+# r3 = 26
+# d1 = 133
+# d3 = 0
+# d4 = 117.5
+# d6 = 28
+
+# r1 = 22.12
+# r2 = 135.7
+# r3 = 31.8
+# d1 = 300.32
+# d3 = -36.3
+# d4 = 293
+# d6 = -62
+
+r1 = 0
+r2 = 135.7
+r3 = 0
+d1 = 300.32
 d3 = 0
-d4 = 117.5
-d6 = 28
+d4 = 293
+d6 = -62
 
 # Initial theta inputs in degrees
 thetas = np.array([360*numRotations/2] * 6)
+
+class Vector(object):
+	def __init__(self, xEnd, yEnd, zEnd, xBegin, yBegin, zBegin, length):
+		self.distance = length
+		self.xDir = (xEnd - xBegin)/self.distance
+		self.yDir = (yEnd - yBegin)/self.distance
+		self.zDir = (zEnd - zBegin)/self.distance
+	def get_direction(self):
+		return [self.xDir, self.yDir, self.zDir]
 
 def getRotations(jointRotationMatrices):
 	# equations for y x z rotations from rotation matrix
@@ -101,6 +128,7 @@ def updateFromSlider(val):
 	thetas[4] = sliderTheta5.val
 	thetas[5] = sliderTheta6.val
 	# call updateMatrices and graph points, lines, axes, and labels at new joint positions
+	# jointPositions, baseTransforms = ForwardK.ForwardK(thetas)[0::2]
 	jointPositions, baseTransforms = ForwardK.updateMatrices(thetas)[0::2]
 	drawArm(jointPositions, baseTransforms)
 
@@ -310,98 +338,11 @@ def IKTestIndividual(text):
 		# update end effector position with new thetas
 		# test if end effector is close enough to desired position
 		# stop if true
-  
-###
-# IK helper functions
-###
 
-def MatrixScale(A, k):
-	for v in A:
-		v = v * k
-	return A
-
-def tran2pos(Ttp, Xtp):
-	Xtp[0] = Ttp[0*4+3]
-	Xtp[1] = Ttp[1*4+3]
-	Xtp[2] = Ttp[2*4+3]
-	Xtp[4] = np.arctan2(np.sqrt(Ttp[2*4 + 0]*Ttp[2*4 + 0] + Ttp[2*4 + 1]*Ttp[2*4 + 1]),Ttp[2*4 + 2])
-	Xtp[3] = np.arctan2(Ttp[1*4 + 2]/np.sin(Xtp[4]),Ttp[0*4 + 2]/np.sin(Xtp[4]))
-	Xtp[5] = np.arctan2(Ttp[2*4 + 1]/np.sin(Xtp[4]),-Ttp[2*4 + 0]/np.sin(Xtp[4]))
-	return Xtp
-
-def pos2tran(Xpt, Tpt):
-	# pos to homogeneous transformation matrix
-	# first row
-	Tpt[0*4 + 0] = np.cos(Xpt[3])*np.cos(Xpt[4])*np.cos(Xpt[5])-np.sin(Xpt[3])*np.sin(Xpt[5])
-	Tpt[0*4 + 1] = -np.cos(Xpt[3])*np.cos(Xpt[4])*np.sin(Xpt[5])-np.sin(Xpt[3])*np.cos(Xpt[5])
-	Tpt[0*4 + 2] = np.cos(Xpt[3])*np.sin(Xpt[4])
-	Tpt[0*4 + 3] = Xpt[0]
-	# second row
-	Tpt[1*4 + 0] = np.sin(Xpt[3])*np.cos(Xpt[4])*np.cos(Xpt[5])+np.cos(Xpt[3])*np.sin(Xpt[5])
-	Tpt[1*4 + 1] = -np.sin(Xpt[3])*np.cos(Xpt[4])*np.sin(Xpt[5])+np.cos(Xpt[3])*np.cos(Xpt[5])
-	Tpt[1*4 + 2] = np.sin(Xpt[3])*np.sin(Xpt[4])
-	Tpt[1*4 + 3] = Xpt[1]
-	# third row
-	Tpt[2*4 + 0] = -np.sin(Xpt[4])*np.cos(Xpt[5])
-	Tpt[2*4 + 1] = np.sin(Xpt[4])*np.sin(Xpt[5])
-	Tpt[2*4 + 2] = np.cos(Xpt[4])
-	Tpt[2*4 + 3] = Xpt[2]
-	# fourth row
-	Tpt[3*4 + 0] = 0.0
-	Tpt[3*4 + 1] = 0.0
-	Tpt[3*4 + 2] = 0.0
-	Tpt[3*4 + 3] = 1.0
-	return Tpt
-
-def invtran(Titi, Titf):
-	# finding the inverse of the homogeneous transformation matrix
-	# first row
-	Titf[0*4 + 0] = Titi[0*4 + 0]
-	Titf[0*4 + 1] = Titi[1*4 + 0]
-	Titf[0*4 + 2] = Titi[2*4 + 0]
-	Titf[0*4 + 3] = -Titi[0*4 + 0]*Titi[0*4 + 3]-Titi[1*4 + 0]*Titi[1*4 + 3]-Titi[2*4 + 0]*Titi[2*4 + 3]
-	# second row
-	Titf[1*4 + 0] = Titi[0*4 + 1]
-	Titf[1*4 + 1] = Titi[1*4 + 1]
-	Titf[1*4 + 2] = Titi[2*4 + 1]
-	Titf[1*4 + 3] = -Titi[0*4 + 1]*Titi[0*4 + 3]-Titi[1*4 + 1]*Titi[1*4 + 3]-Titi[2*4 + 1]*Titi[2*4 + 3]
-	# third row
-	Titf[2*4 + 0] = Titi[0*4 + 2]
-	Titf[2*4 + 1] = Titi[1*4 + 2]
-	Titf[2*4 + 2] = Titi[2*4 + 2]
-	Titf[2*4 + 3] = -Titi[0*4 + 2]*Titi[0*4 + 3]-Titi[1*4 + 2]*Titi[1*4 + 3]-Titi[2*4 + 2]*Titi[2*4 + 3]
-	# forth row
-	Titf[3*4 + 0] = 0.0
-	Titf[3*4 + 1] = 0.0
-	Titf[3*4 + 2] = 0.0
-	Titf[3*4 + 3] = 1.0
-	return Titf
-
-def DH1line(thetadh, alfadh, rdh, ddh, Tdh):
-	# creats Denavit-Hartenberg homogeneous transformation matrix
-	# first row
-	Tdh[0*4 + 0] = np.cos(thetadh)
-	Tdh[0*4 + 1] = -np.sin(thetadh)*np.cos(alfadh)
-	Tdh[0*4 + 2] = np.sin(thetadh)*np.sin(alfadh)
-	Tdh[0*4 + 3] = rdh*np.cos(thetadh)
-	# second row
-	Tdh[1*4 + 0] = np.sin(thetadh)
-	Tdh[1*4 + 1] = np.cos(thetadh)*np.cos(alfadh)
-	Tdh[1*4 + 2] = -np.cos(thetadh)*np.sin(alfadh)
-	Tdh[1*4 + 3] = rdh*np.sin(thetadh)
-	# third row
-	Tdh[2*4 + 0] = 0.0
-	Tdh[2*4 + 1] = np.sin(alfadh)
-	Tdh[2*4 + 2] = np.cos(alfadh)
-	Tdh[2*4 + 3] = ddh
-	# forth row
-	Tdh[3*4 + 0] = 0.0
-	Tdh[3*4 + 1] = 0.0
-	Tdh[3*4 + 2] = 0.0
-	Tdh[3*4 + 3] = 1.0
+	
 
 # Inverse kinematics solution for 6-dof spherical wrist robot by skyentific
-def InverseK(input):
+def SkyentificInverseK(input):
 	global thetas
 	np.set_printoptions(precision = 2)
 	# draw desired end effector location
@@ -423,55 +364,47 @@ def InverseK(input):
 	d=np.array([d1, 0.0, d3, d4, 0.0, d6]) # d=[133 0 7 117.5 0 28]
  
 	# from deg to rad
-	MatrixScale(theta, np.pi/180.0) # theta=theta*pi/180
-	MatrixScale(alfa, np.pi/180.0) # alfa=alfa*pi/180
+	mh.MatrixScale(theta, np.pi/180.0) # theta=theta*pi/180
+	mh.MatrixScale(alfa, np.pi/180.0) # alfa=alfa*pi/180
 
 	# work frame
-	Xwf=[0]*6
+	Xwf = np.zeros(6)
 
 	# tool frame
-	Xtf=[0]*6
+	Xtf = np.zeros(6)
 
 	# work frame transformation matrix
-	Twf = [0]*16
-	Twf=pos2tran(Xwf, Twf)
+	Twf = mh.pos2tran(Xwf)
 	print("Twf: {}".format(Twf))
 
 	# tool frame transformation matrix
-	Ttf = [0]*16
-	Ttf=pos2tran(Xtf, Ttf)
+	Ttf = mh.pos2tran(Xtf)
 	print("Ttf: {}".format(Ttf))
 
 	# total transformation matrix
-	Twt = [0]*16
-	Twt=pos2tran(Xik, Twt)
+	Twt = mh.pos2tran(Xik)
 	print("Twt: {}".format(Twt))
 
 	# find T06
-	inTwf = np.zeros(16)
-	inTtf = np.zeros(16)
-	Tw6 = np.zeros(16)
-	T06 = np.zeros(16)
-	invtran(Twf, inTwf) # inTwf=invtran(Twf)
-	invtran(Ttf, inTtf) # inTtf=invtran(Ttf)
+	inTwf = mh.invtran(Twf) # inTwf=mh.invtran(Twf)
+	inTtf = mh.invtran(Ttf) # inTtf=mh.invtran(Ttf)
 	print("inTwf: {}".format(inTwf))
 	print("inTft: {}".format(inTtf))
 	
-	np.matmul(Twt, inTtf, Tw6) # Tw6=Twt*inTtf
+	# np.matmul(Twt, inTtf, Tw6) # Tw6=Twt*inTtf
+	Tw6 = Twt @ inTtf
 	print("Tw6: {}".format(Tw6))
-	np.matmul(inTwf, Tw6, T06) # T06=inTwf*Tw6
-	print("T06: {}".format(T06))
  
+	# np.matmul(inTwf, Tw6, T06) # T06=inTwf*Tw6
+	T06 = inTwf @ Tw6
+	print("T06: {}".format(T06))
 
 	# positon of the spherical wrist
-	Xsw = [0]*3
-	# Xsw=T06(1:3,4)-d(6)*T06(1:3,3)
-	Xsw[0]=T06[0*4 + 3]-d[5]*T06[0*4 + 2]
-	Xsw[1]=T06[1*4 + 3]-d[5]*T06[1*4 + 2]
-	Xsw[2]=T06[2*4 + 3]-d[5]*T06[2*4 + 2]
+	Xsw = np.array([T06[0][3]-d[5]*T06[0][2], T06[1][3]-d[5]*T06[1][2], T06[2][3]-d[5]*T06[2][2]])
+	print("Wrist position: {}".format(Xsw))
 
-	# joints variable
-	# Jik=zeros(6,1)
+	# Calculate joint angles
+ 
 	# first joint
 	Jik[0]=np.arctan2(Xsw[1],Xsw[0])-np.arctan2(d[2],np.sqrt(Xsw[0]*Xsw[0]+Xsw[1]*Xsw[1]-d[2]*d[2])) # Jik(1)=np.arctan2(Xsw(2),Xsw(1))-np.arctan2(d(3),np.sqrt(Xsw(1)^2+Xsw(2)^2-d(3)^2))
 	# second joint
@@ -483,36 +416,149 @@ def InverseK(input):
 	-np.arccos((r[1]*r[1]+r[2]*r[2]+d[3]*d[3]-(Xsw[2]-d[0])*(Xsw[2]-d[0])-(np.sqrt(Xsw[0]*Xsw[0]+Xsw[1]*Xsw[1]-d[2]*d[2])-r[0])*(np.sqrt(Xsw[0]*Xsw[0]+Xsw[1]*Xsw[1]-d[2]*d[2])-r[0]))/(2*r[1]*np.sqrt(r[2]*r[2]+d[3]*d[3])))
 	-np.arctan(d[3]/r[2]) # Jik(3)=pi-np.arccos((r(2)^2+r(3)^2+d(4)^2-(Xsw(3)-d(1))^2-(np.sqrt(Xsw(1)^2+Xsw(2)^2-d(3)^2)-r(1))^2)/(2*r(2)*np.sqrt(r(3)^2+d(4)^2)))-np.arctan(d(4)/r(3))
 	# last three joints
-	T01 = np.zeros(16)
-	T12 = np.zeros(16)
-	T23 = np.zeros(16)
-	T02 = np.zeros(16)
-	T03 = np.zeros(16)
-	inT03 = np.zeros(16)
-	T36 = np.zeros(16)
-	DH1line(theta[0]+Jik[0], alfa[0], r[0], d[0], T01) # T01=DH1line(theta(1)+Jik(1),alfa(1),r(1),d(1))
-	DH1line(theta[1]+Jik[1], alfa[1], r[1], d[1], T12) # T12=DH1line(theta(2)+Jik(2),alfa(2),r(2),d(2))
-	DH1line(theta[2]+Jik[2], alfa[2], r[2], d[2], T23) # T23=DH1line(theta(3)+Jik(3),alfa(3),r(3),d(3))
-	np.matmul(T01, T12, T02)
-	np.matmul(T02, T23, T03)
-	np.matmul(inT03, T06, T36)
-	invtran(T03, inT03) # inT03=invtran(T03)
+	T01 = np.zeros((4,4))
+	T12 = np.zeros((4,4))
+	T23 = np.zeros((4,4))
+	T02 = np.zeros((4,4))
+	T03 = np.zeros((4,4))
+	inT03 = np.zeros((4,4))
+	T36 = np.zeros((4,4))
+	T01 = mh.DH1line(theta[0]+Jik[0], alfa[0], r[0], d[0]) # T01=DH1line(theta(1)+Jik(1),alfa(1),r(1),d(1))
+	T12 = mh.DH1line(theta[1]+Jik[1], alfa[1], r[1], d[1]) # T12=DH1line(theta(2)+Jik(2),alfa(2),r(2),d(2))
+	T23 = mh.DH1line(theta[2]+Jik[2], alfa[2], r[2], d[2]) # T23=DH1line(theta(3)+Jik(3),alfa(3),r(3),d(3))
+	# np.matmul(T01, T12, T02)
+	# np.matmul(T02, T23, T03)
+	# np.matmul(inT03, T06, T36)
+	
+	T02 = T01 @ T12
+	T03 = T02 @ T23
+	T36 = inT03 @ T06
+ 
+	inT03 = mh.invtran(T03) # inT03=mh.invtran(T03)
 	# forth joint
-	Jik[3]=np.arctan2(-T36[1*4+2], -T36[0*4+2]) # Jik(4)=np.arctan2(-T36(2,3),-T36(1,3))
+	Jik[3]=np.arctan2(-T36[1][2], -T36[0][2]) # Jik(4)=np.arctan2(-T36(2,3),-T36(1,3))
 	# fifth joint
-	Jik[4]=np.arctan2(np.sqrt(T36[0*4+2]*T36[0*4+2]+T36[1*4+2]*T36[1*4+2]), T36[2*4+2]) # Jik(5)=np.arctan2(np.sqrt(T36(1,3)^2+T36(2,3)^2),T36(3,3))
+	Jik[4]=np.arctan2(np.sqrt(T36[0][2]*T36[0][2]+T36[1][2]*T36[1][2]), T36[2][2]) # Jik(5)=np.arctan2(np.sqrt(T36(1,3)^2+T36(2,3)^2),T36(3,3))
 	# sixth joints
-	Jik[5]=np.arctan2(-T36[2*4+1], T36[2*4+0]) # Jik(6)=np.arctan2(-T36(3,2),T36(3,1))
+	Jik[5]=np.arctan2(-T36[2][1], T36[2][0]) # Jik(6)=np.arctan2(-T36(3,2),T36(3,1))
 	# rad to deg
-	MatrixScale(Jik, 180.0/np.pi) # Jik=Jik/pi*180
+	mh.MatrixScale(Jik, 180.0/np.pi) # Jik=Jik/pi*180
 	thetas = Jik
  
 	print("THETAS: {}".format(thetas))
 
 	currentJointPositions, baseTransforms = ForwardK.updateMatrices(thetas)[0::2]
+	print("JOINT POSITIONS: {}".format(currentJointPositions))
 	drawArm(currentJointPositions, baseTransforms)
 	
+def InverseK(input):
+	global thetas
+	np.set_printoptions(precision = 2)
+	# draw desired end effector location
+	xEnd, yEnd, zEnd, alpha, beta, gamma = input.split(" ")
+ 
+	xEnd = float(xEnd)
+	yEnd = float(yEnd)
+	zEnd = float(zEnd)
+	alpha = float(alpha)
+	beta = float(beta)
+	gamma = float(gamma)
+ 
+	lengths = np.array([135.7, 300.32, 293])
+ 
+	transform0End = np.array([[math.cos(beta)*math.cos(gamma), -math.cos(beta)*math.sin(gamma), math.sin(beta), xEnd],
+							  [math.cos(alpha)*math.sin(gamma) + math.cos(gamma)*math.sin(alpha)*math.sin(beta), math.cos(alpha)*math.cos(gamma) - math.sin(alpha)*math.sin(beta)*math.sin(gamma), -math.cos(beta)*math.sin(alpha), yEnd],
+							  [-math.cos(alpha)*math.cos(gamma)*math.sin(beta) + math.sin(alpha)*math.sin(gamma), math.cos(alpha)*math.sin(beta)*math.sin(gamma) + math.cos(gamma)*math.sin(alpha), math.cos(alpha)*math.cos(beta), zEnd],
+							  [0, 0, 0, 1]])
+	transformEndSw = np.array([[1, 0, 0, 0],
+							   [0, 1, 0, 0],
+							   [0, 0, 1, d6-60],
+							   [0, 0, 0, 1]])
+	transform0Sw = transform0End @ transformEndSw
 
+	sphericalPos = np.vstack(transform0Sw[:-1,3])
+ 
+	xSw = sphericalPos[0]
+	ySw = sphericalPos[1]
+	zSw = sphericalPos[2]
+ 
+	hSw = zSw - lengths[0]
+ 
+	if np.sqrt(xSw**2 + ySw**2 + hSw**2) > sum(lengths[1:]):
+		print("Desired position and orientation not in workspace.")
+	else:
+		RSw = np.sqrt(xSw**2 + ySw**2)
+		rSw = np.sqrt(hSw**2 + RSw**2)
+		alpha2 = np.arcsin(hSw/rSw)
+
+		# First three joint angles responsible for placing end effector
+		# Using law of cosines:
+		theta1 = np.arctan2(ySw, xSw)
+		theta2 = np.arccos((lengths[1]**2 - lengths[2]**2 + rSw**2)/(2*lengths[1]*rSw)) + alpha2
+		theta3 = np.arccos((lengths[2]**2 + lengths[1]**2 - rSw**2)/(2*lengths[1]*lengths[2]))
+		# Final three joint angles specify rotation only
+		# Multi stuff:
+		# dirEnd = Vector(xEnd, yEnd, zEnd, xSw, ySw, zSw, lenEnd)
+		rElbow = lengths[1] * math.cos(theta2)
+		xElbow = rElbow * math.cos(theta1)
+		yElbow = rElbow * math.sin(theta1)
+		zElbow = lengths[0] + lengths[1] * math.sin(theta2)
+		dirForearm = Vector(xEnd, yEnd, zEnd, xElbow, yElbow, zElbow, lengths[2])
+		print(dirForearm.get_direction())
+		
+		# remove list att from th 1 2 and 3
+		theta1 = float(theta1)
+		theta2 = float(theta2)
+		theta3 = float(theta3)
+  
+		# rot_mat_0_6 = np.array([[-1.0, 0.0, 0.0],
+		# 						[0.0, -1.0, 0.0],
+		# 						[0.0, 0.0, 1.0]])
+  
+  		# rot_mat_0_3 = np.array([[-np.sin(theta1), 0.0, np.cos(theta1)],
+		# 						[np.cos(theta1), 0.0, np.sin(theta1)],
+		# 						[0.0, 1.0, 0.0]])
+
+		rot_mat_0_6 = np.array([[np.cos(beta)*np.cos(gamma), -np.cos(beta)*np.sin(gamma), np.sin(beta)],
+								[np.cos(alpha)*np.sin(gamma) + np.cos(gamma)*np.sin(alpha)*np.sin(beta), np.cos(alpha)*np.cos(gamma) - np.sin(alpha)*np.sin(beta)*np.sin(gamma), -np.cos(beta)*np.sin(alpha)],
+								[-np.cos(alpha)*np.cos(gamma)*np.sin(beta) + np.sin(alpha)*np.sin(gamma), np.cos(alpha)*np.sin(beta)*np.sin(gamma) + np.cos(gamma)*np.sin(alpha), np.cos(alpha)*np.cos(beta)]])
+
+
+		rot_mat_0_3 = np.array([[np.cos(theta1)*np.cos(theta3)*(np.cos(theta2) - np.pi/2) + np.cos(theta1)*np.sin(theta3)*(-np.sin(theta2) - np.pi/2), np.cos(theta1)*np.cos(theta3)*(-np.sin(theta2) - np.pi/2) - np.cos(theta1)*np.sin(theta3)*(np.cos(theta2) - np.pi/2), -np.sin(theta1)],
+								[np.cos(theta3)*np.sin(theta1)*(np.cos(theta2) - np.pi/2) + np.sin(theta1)*np.sin(theta3)*(-np.sin(theta2) - np.pi/2), np.cos(theta3)*np.sin(theta1)*(-np.sin(theta2) - np.pi/2) - np.sin(theta1)*np.sin(theta3)*(np.cos(theta2) - np.pi/2), np.cos(theta1)],
+								[np.cos(theta3)*(-np.sin(theta2) - np.pi/2) + np.sin(theta3)*(-np.cos(theta2) - np.pi/2), np.cos(theta3)*(-np.cos(theta2) - np.pi/2) - np.sin(theta3)*(-np.sin(theta2) - np.pi/2), 0]])
+
+		inv_rot_mat_0_3 = np.linalg.inv(rot_mat_0_3)
+		rot_mat_3_6 = inv_rot_mat_0_3 @ rot_mat_0_6
+  
+		# theta5 = np.arccos(rot_mat_3_6[2, 2])
+		# theta6 = np.arccos(rot_mat_3_6[2, 0] / -np.sin(theta5))
+		# theta4 = np.arccos(rot_mat_3_6[1,2] / np.sin(theta5))
+  
+		theta5 = np.arccos(rot_mat_3_6[1][1])
+		theta4 = -np.arccos(rot_mat_3_6[0][1]/np.sin(theta5))
+		theta6 = np.arccos(rot_mat_3_6[1][0]/np.sin(theta5))
+  
+		# print(f'\nxSw: {xSw}, ySw: {ySw}, zSw: {zSw}')
+		print(f'\nAngles in radians:\ntheta1: {theta1}\ntheta2: {theta2}\ntheta3: {theta3}\ntheta4: {theta4}\ntheta5: {theta5}\ntheta6: {theta6}')
+		print(f'\nAngles in degrees:\ntheta1: {theta1*180/np.pi}\ntheta2: {theta2*180/np.pi}\ntheta3: {theta3*180/np.pi}\ntheta4: {theta4*180/np.pi}\ntheta5: {theta5*180/np.pi}\ntheta6: {theta6*180/np.pi}')
+  
+		thetas = np.array([theta1, theta2, theta3, theta4, theta5, theta6])
+		thetas = thetas * 180/np.pi
+  
+		#recalculate forward kinematics to compare
+		jointPos, jointRot, _ = ForwardK.updateMatrices(thetas)
+		# print(f"jointPos[5]: {jointPos[5]}")
+		# print(f"jointPos[6]: {jointPos[6]}")
+		# print(f"jointRot[5]: {jointRot[5]}")		# todo: otolpos and toolrot don't match with original values
+		# print(f"jointRot[6]: {jointRot[6]}")
+		# print(f"\ntransform0End: {transform0End}")
+		print(f"\nxError: {xEnd - jointPos[6][0]}")
+		print(f"yError: {yEnd - jointPos[6][1]}")
+		print(f"zError: {zEnd - jointPos[6][2]}")
+		currentJointPositions, baseTransforms = ForwardK.updateMatrices(thetas)[0::2]
+		# print("JOINT POSITIONS: {}".format(currentJointPositions))
+		drawArm(currentJointPositions, baseTransforms)
 
 def getToolPositionDistance(thetas, desiredToolPos):
 	currentToolPos = ForwardK.getEndEffectorData(thetas)[0]
@@ -526,6 +572,7 @@ def runToPosition(text):
 	InverseK(text)
  
 # get initial joint positions
+# jointPositions, jointRotationMatrices, baseTransforms = ForwardK.updateMatrices(thetas)
 jointPositions, jointRotationMatrices, baseTransforms = ForwardK.updateMatrices(thetas)
 
 # Graph joint positions

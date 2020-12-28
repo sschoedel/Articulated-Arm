@@ -1,12 +1,11 @@
 import numpy as np
-import matrixHelpers as mh
 
 numRotations = 2
 
 thetas = np.array([360*numRotations/2] * 6)
 
 alpha = np.array([0, -np.pi/2, 0, -np.pi/2, -np.pi/2, np.pi/2])
-toolPosition = np.array([0, 60, 0])
+toolPosition = np.array([0, 0, 60])
 
 # r1 = 47
 # r2 = 110
@@ -31,7 +30,7 @@ r3_1 = 0
 d1_1 = 300.32
 d3_1 = 0
 d4_1 = 293
-d6_1 = 62
+d6_1 = -62
 
 xOff = np.array([r1_1, 0, d1_1, 0, 0, 0])
 yOff = np.array([0, r3_1, 0, d4_1, 0, d6_1])
@@ -92,6 +91,24 @@ def getEndEffectorData(theta):  # more efficient version of update matrice that 
 
 def updateMatrices(theta):
 	theta = theta * np.pi/180
+
+
+	# r1 = 47
+	# r2 = 110
+	# r3 = 26
+	# d1 = 133
+	# d3 = 0
+	# d4 = 117.5
+	# d6 = 28
+
+	# xOff = np.array([r1, 0, d1, 0, 0, 0])
+	# yOff = np.array([0, r3, 0, d4, 0, d6])
+	# zOff = np.array([r2, 0, 0, d3, 0, 0])
+
+ 
+	# xOff1 = np.array([22.12, 0, 300.32, 0, 0, 0])
+	# yOff1 = np.array([0, 31.8, 0, 293, 0, -62])
+	# zOff1 = np.array([135.7, 0, 0, -36.3, 0, 0])
  
 	# Rotation from 0 to 1 = Rx(alpha)Rz(theta)
 	# alpha is rotation to next joint location theta varies as arm moves
@@ -115,29 +132,17 @@ def updateMatrices(theta):
 							[np.sin(theta[2]), np.cos(theta[2]), 0, yOff[2]], 
 							[0, 0, 1, zOff[2]], 
 							[0, 0, 0, 1]])
-	# transform34 = np.array([[np.cos(theta[3]), -np.sin(theta[3]), 0, xOff[3]], 
-	# 						[0, 0, 1, yOff[3]], 
-	# 						[-np.sin(theta[3]), -np.cos(theta[3]), 0, zOff[3]], 
-	# 						[0, 0, 0, 1]])
-	# transform45 = np.array([[np.cos(theta[4]), -np.sin(theta[4]), 0, xOff[4]], 
-	# 						[0, 0, 1, yOff[4]], 
-	# 						[-np.sin(theta[4]), -np.cos(theta[4]), 0, zOff[4]], 
-	# 						[0, 0, 0, 1]])
-	# transform56 = np.array([[np.cos(theta[5]), -np.sin(theta[5]), 0, xOff[5]], 
-	# 						[0, 0, -1, yOff[5]], 
-	# 						[np.sin(theta[5]), np.cos(theta[5]), 0, zOff[5]], 
-	# 						[0, 0, 0, 1]])
-	transform34 = np.array([[np.cos(theta[3]), 0, np.sin(theta[3]), xOff[3]], 
-							[0, 1, 0, yOff[3]], 
-							[-np.sin(theta[3]), 0, np.cos(theta[3]), zOff[3]], 
+	transform34 = np.array([[np.cos(theta[3]), -np.sin(theta[3]), 0, xOff[3]], 
+							[0, 0, 1, yOff[3]], 
+							[-np.sin(theta[3]), -np.cos(theta[3]), 0, zOff[3]], 
 							[0, 0, 0, 1]])
 	transform45 = np.array([[np.cos(theta[4]), -np.sin(theta[4]), 0, xOff[4]], 
-							[np.sin(theta[4]), np.cos(theta[4]), 0, yOff[4]], 
-							[0, 0, 1, zOff[4]], 
+							[0, 0, 1, yOff[4]], 
+							[-np.sin(theta[4]), -np.cos(theta[4]), 0, zOff[4]], 
 							[0, 0, 0, 1]])
-	transform56 = np.array([[np.cos(theta[5]), 0, np.sin(theta[5]), xOff[5]], 
-							[0, 1, 0, yOff[5]], 
-							[-np.sin(theta[5]), 0, np.cos(theta[5]), zOff[5]], 
+	transform56 = np.array([[np.cos(theta[5]), -np.sin(theta[5]), 0, xOff[5]], 
+							[0, 0, -1, yOff[5]], 
+							[np.sin(theta[5]), np.cos(theta[5]), 0, zOff[5]], 
 							[0, 0, 0, 1]])
 	# Working position of tool in end effector coordinates
 	transform6Tool = np.array([[1, 0, 0, toolPosition[0]],
@@ -162,67 +167,7 @@ def updateMatrices(theta):
 	jointRotationMatrices = np.array([baseTransforms[i,:-1,:-1] for i in range(0, baseTransforms.shape[0])])
 	return jointPositions, jointRotationMatrices, baseTransforms
 
-def ForwardK(theta):
-	# forward kinematics
-	# input: Jfk - joints value for the calculation of the forward kinematics
-	# output: Xfk - pos value for the calculation of the forward kinematics
-
-	r = np.array([r1_2, r2_2, r3_2, d3_2, 0.0, d6_2])
-	d = np.array([d1_2, 0.0, 0.0, d4_2, 0.0, 0.0])
-
-	# Denavit-Hartenberg matrix
-	theTemp = np.array([0.0, 90.0, 0.0, 90.0, 0.0, -90.0])
-	theta = np.add(theTemp, theta)
-	alfa = np.array([-90.0, 0.0, -90.0, 90.0, -90.0, 0.0])
-	# r = np.array([r1_2, r2_2, r3_2, 0.0, 0.0, 0.0])
-	# d = np.array([d1_2, 0.0, d3_2, d4_2, 0.0, d6_2])
-	# from deg to rad
-	theta = theta * np.pi/180
-	alfa = alfa * np.pi/180
-
-	# work frame
-	Xwf = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # Xwf=[0 0 0 0 0 0]
-
-	# tool frame
-	Xtf = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]) # Xtf=[0 0 0 0 0 0]
-
-	# work frame transformation matrix
-	Twf = mh.pos2tran(Xwf) # Twf=mh.pos2tran(Xwf)
-
-	# tool frame transformation matrix
-	Ttf = mh.pos2tran(Xtf) # Ttf=mh.pos2tran(Xtf)
-
-	# DH homogeneous transformation matrix
-	T01 = mh.DH1line(theta[0], alfa[0], r[0], d[0]) # T01=mh.DH1line(theta(1),alfa(1),r(1),d(1))
-	T12 = mh.DH1line(theta[1], alfa[1], r[1], d[1]) # T12=mh.DH1line(theta(2),alfa(2),r(2),d(2))
-	T23 = mh.DH1line(theta[2], alfa[2], r[2], d[2]) # T23=mh.DH1line(theta(3),alfa(3),r(3),d(3))
-	T34 = mh.DH1line(theta[3], alfa[3], r[3], d[3]) # T34=mh.DH1line(theta(4),alfa(4),r(4),d(4))
-	T45 = mh.DH1line(theta[4], alfa[4], r[4], d[4]) # T45=mh.DH1line(theta(5),alfa(5),r(5),d(5))
-	T56 = mh.DH1line(theta[5], alfa[5], r[5], d[5]) # T56=mh.DH1line(theta(6),alfa(6),r(6),d(6))
-
-	Tw1 = Twf @ T01
-	Tw2 = Tw1 @ T12
-	Tw3 = Tw2 @ T23
-	Tw4 = Tw3 @ T34
-	Tw5 = Tw4 @ T45
-	Tw6 = Tw5 @ T56
-	Twt = Tw6 @ Ttf
-
-	# calculate pos from transformation matrix
-	Xfk = mh.tran2pos(Twt) # Xfk=mh.tran2pos(Twt)
-	# Xfk(4:6)=Xfk(4:6)/np.pi*180
-	Xfk[3] = Xfk[3]/np.pi*180.0
-	Xfk[4] = Xfk[4]/np.pi*180.0
-	Xfk[5] = Xfk[5]/np.pi*180.0
- 
-	baseTransforms = np.array([Tw1, Tw2, Tw3, Tw4, Tw5, Tw6, Twt])
-
-	# Extract position and rotation data for each joint
-	jointPositions = np.array([baseTransforms[i,:-1,3] for i in range(0, baseTransforms.shape[0])])
-	jointRotationMatrices = np.array([baseTransforms[i,:-1,:-1] for i in range(0, baseTransforms.shape[0])])
-	return jointPositions, jointRotationMatrices, baseTransforms
-
-print(updateMatrices(np.array([0,0,0,0,0,0]))[0])
+# print(updateMatrices(np.array([0,0,0,0,0,0]))[0])
 
 if __name__ == '__main__':
 	pass
