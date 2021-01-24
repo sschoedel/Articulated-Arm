@@ -6,7 +6,7 @@ numRotations = 2
 thetas = np.array([360*numRotations/2] * 6)
 
 alpha = np.array([0, -np.pi/2, 0, -np.pi/2, -np.pi/2, np.pi/2])
-toolPosition = np.array([0, 60, 0])
+toolPosition = np.array([60, 0, 0])
 
 # r1 = 47
 # r2 = 110
@@ -20,22 +20,22 @@ r1_1 = 22.12
 r2_1 = 135.7
 r3_1 = 31.8
 d1_1 = 300.32
-d3_1 = -36.3
-d4_1 = 293
-d6_1 = -62
-
-# for comparing ik code
-r1_1 = 0
-r2_1 = 135.7
-r3_1 = 0
-d1_1 = 300.32
-d3_1 = 0
+d3_1 = 36.3
 d4_1 = 293
 d6_1 = 62
 
-xOff = np.array([r1_1, 0, d1_1, 0, 0, 0])
-yOff = np.array([0, r3_1, 0, d4_1, 0, d6_1])
-zOff = np.array([r2_1, 0, 0, d3_1, 0, 0])
+# for comparing ik code
+# r1_1 = 0
+# r2_1 = 135.7
+# r3_1 = 0
+# d1_1 = 300.32
+# d3_1 = 0
+# d4_1 = 293
+# d6_1 = 62
+
+xOff = np.array([r1_1, 0, 0, d4_1, 0, d6_1])
+yOff = np.array([0, r3_1, 0, d3_1, 0, 0])
+zOff = np.array([r2_1, 0, d1_1, 0, 0, 0])
 
 r1_2 = 22.12
 r2_2 = 31.8
@@ -57,9 +57,9 @@ def getEndEffectorData(theta):  # more efficient version of update matrice that 
 							[np.sin(theta[0]), np.cos(theta[0]), 0, yOff[0]], 
 							[0, 0, 1, zOff[0]], 
 							[0, 0, 0, 1]])
-	transform12 = np.array([[np.cos(theta[1] - np.pi/2), -np.sin(theta[1] - np.pi/2), 0, xOff[1]],
+	transform12 = np.array([[np.cos(theta[1]), -np.sin(theta[1]), 0, xOff[1]],
 							[0, 0, 1, yOff[1]], 
-							[-np.sin(theta[1] - np.pi/2), -np.cos(theta[1] - np.pi/2), 0, zOff[1]], 
+							[-np.sin(theta[1]), -np.cos(theta[1]), 0, zOff[1]], 
 							[0, 0, 0, 1]])
 	transform23 = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0, xOff[2]], 
 							[np.sin(theta[2]), np.cos(theta[2]), 0, yOff[2]], 
@@ -92,6 +92,7 @@ def getEndEffectorData(theta):  # more efficient version of update matrice that 
 
 def updateMatrices(theta):
 	theta = theta * np.pi/180
+	print(f'thetas: {theta}')
  
 	# Rotation from 0 to 1 = Rx(alpha)Rz(theta)
 	# alpha is rotation to next joint location theta varies as arm moves
@@ -103,41 +104,53 @@ def updateMatrices(theta):
 	# cascading down from each transition matrix
 
 	# Transformation matrices
+	# transform01 = np.array([[np.cos(theta[0]), -np.sin(theta[0]), 0, xOff[0]], 
+	# 						[np.sin(theta[0]), np.cos(theta[0]), 0, yOff[0]], 
+	# 						[0, 0, 1, zOff[0]], 
+	# 						[0, 0, 0, 1]])
+	# transform12 = np.array([[np.cos(theta[1]), -np.sin(theta[1]), 0, xOff[1]],
+	# 						[0, 0, 1, yOff[1]], 
+	# 						[-np.sin(theta[1]), -np.cos(theta[1]), 0, zOff[1]], 
+	# 						[0, 0, 0, 1]])
+	# transform23 = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0, xOff[2]], 
+	# 						[np.sin(theta[2]), np.cos(theta[2]), 0, yOff[2]], 
+	# 						[0, 0, 1, zOff[2]], 
+	# 						[0, 0, 0, 1]])
 	transform01 = np.array([[np.cos(theta[0]), -np.sin(theta[0]), 0, xOff[0]], 
 							[np.sin(theta[0]), np.cos(theta[0]), 0, yOff[0]], 
 							[0, 0, 1, zOff[0]], 
 							[0, 0, 0, 1]])
-	transform12 = np.array([[np.cos(theta[1] - np.pi/2), -np.sin(theta[1] - np.pi/2), 0, xOff[1]],
-							[0, 0, 1, yOff[1]], 
-							[-np.sin(theta[1] - np.pi/2), -np.cos(theta[1] - np.pi/2), 0, zOff[1]], 
+	transform12 = np.array([[np.cos(theta[1]), 0, np.sin(theta[1]), xOff[1]],
+							[0, 1, 0, yOff[1]], 
+							[-np.sin(theta[1]), 0, np.cos(theta[1]), zOff[1]], 
 							[0, 0, 0, 1]])
-	transform23 = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0, xOff[2]], 
-							[np.sin(theta[2]), np.cos(theta[2]), 0, yOff[2]], 
-							[0, 0, 1, zOff[2]], 
+	transform23 = np.array([[np.cos(theta[2]), 0, np.sin(theta[2]), xOff[2]],
+							[0, 1, 0, yOff[2]], 
+							[-np.sin(theta[2]), 0, np.cos(theta[2]), zOff[2]], 
 							[0, 0, 0, 1]])
 	# transform34 = np.array([[np.cos(theta[3]), -np.sin(theta[3]), 0, xOff[3]], 
-	# 						[0, 0, 1, yOff[3]], 
+	# 						[0, 0, 1, yOff[3]],
 	# 						[-np.sin(theta[3]), -np.cos(theta[3]), 0, zOff[3]], 
 	# 						[0, 0, 0, 1]])
 	# transform45 = np.array([[np.cos(theta[4]), -np.sin(theta[4]), 0, xOff[4]], 
-	# 						[0, 0, 1, yOff[4]], 
+	# 						[0, 0, 1, yOff[4]],
 	# 						[-np.sin(theta[4]), -np.cos(theta[4]), 0, zOff[4]], 
 	# 						[0, 0, 0, 1]])
 	# transform56 = np.array([[np.cos(theta[5]), -np.sin(theta[5]), 0, xOff[5]], 
-	# 						[0, 0, -1, yOff[5]], 
+	# 						[0, 0, -1, yOff[5]],
 	# 						[np.sin(theta[5]), np.cos(theta[5]), 0, zOff[5]], 
 	# 						[0, 0, 0, 1]])
-	transform34 = np.array([[np.cos(theta[3]), 0, np.sin(theta[3]), xOff[3]], 
-							[0, 1, 0, yOff[3]], 
-							[-np.sin(theta[3]), 0, np.cos(theta[3]), zOff[3]], 
+	transform34 = np.array([[1, 0, 0, xOff[3]], 
+							[0, np.cos(theta[3]), -np.sin(theta[3]), yOff[3]], 
+							[0, np.sin(theta[3]), np.cos(theta[3]), zOff[3]], 
 							[0, 0, 0, 1]])
-	transform45 = np.array([[np.cos(theta[4]), -np.sin(theta[4]), 0, xOff[4]], 
-							[np.sin(theta[4]), np.cos(theta[4]), 0, yOff[4]], 
-							[0, 0, 1, zOff[4]], 
+	transform45 = np.array([[np.cos(theta[4]), 0, np.sin(theta[4]), xOff[4]], 
+							[0, 1, 0, yOff[4]], 
+							[-np.sin(theta[4]), 0, np.cos(theta[4]), zOff[4]], 
 							[0, 0, 0, 1]])
-	transform56 = np.array([[np.cos(theta[5]), 0, np.sin(theta[5]), xOff[5]], 
-							[0, 1, 0, yOff[5]], 
-							[-np.sin(theta[5]), 0, np.cos(theta[5]), zOff[5]], 
+	transform56 = np.array([[1, 0, 0, xOff[5]], 
+							[0, np.cos(theta[5]), -np.sin(theta[5]), yOff[5]], 
+							[0, np.sin(theta[5]), np.cos(theta[5]), zOff[5]], 
 							[0, 0, 0, 1]])
 	# Working position of tool in end effector coordinates
 	transform6Tool = np.array([[1, 0, 0, toolPosition[0]],

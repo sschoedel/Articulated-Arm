@@ -299,7 +299,7 @@ void updateSensors()
     if (debugging){ Serial.print(averageCurrents[i]);Serial.print("\t"); }
   }
   if (debugging){ Serial.print("\n");}
-  Serial.println(averageCurrents[0]);
+//  Serial.println(averageCurrents[0]);
 }
 
 int averageData(int mostRecent, int index)

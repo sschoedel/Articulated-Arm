@@ -58,7 +58,8 @@ long len3 = 83 + currentToolLen;
 int h1 = 135;
 
 //                     motors 1 2 3 4 5 6
-float startingDegrees[6] = {0, 90, 8, 0, -12, 0};
+//float startingDegrees[6] = {0, 90, 8, 0, -12, 0};
+float startingDegrees[6] = {0, 0, 0, 0, 0, 0};
 long stepsPerRev[6] = {48000, 312000, 15200, 5720, 10280, 4150};
 
 // Interrupt constants
@@ -92,7 +93,7 @@ int encoderOffsetsDegrees[6] = {0, 0, 0, 0, 90, -10};
 float goalThetas[6] = {0, 0, 0, 0, 0, 0};
 long goalPositions[6] = {0, 0, 0, 0, 0, 0};
 String cmd[MAX_CMDS] = {};
-bool debugging = true;
+bool debugging = false;
 bool debuggingEncoders = false;
 bool newCmd = false;
 
@@ -119,12 +120,11 @@ void setAllMotorPos();
 void stopMotors();
 void setGoalLoc();
 void setGoalPos();
-
 void checkNRF();
 
 void setup() {
   // Serial, i2c, and motor setup
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(13, OUTPUT);
   Wire.begin();
   setupMotors();

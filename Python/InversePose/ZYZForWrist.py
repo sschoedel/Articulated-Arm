@@ -2,106 +2,96 @@ import sympy as sym
 from sympy import *
 import numpy as np
 from math import sin, cos
-sina1 = sym.Symbol('sin(alpha1)')
-sina2 = sym.Symbol('sin(alpha2)')
-sina3 = sym.Symbol('sin(alpha3)')
-cosa1 = sym.Symbol('cos(alpha1)')
-cosa2 = sym.Symbol('cos(alpha2)')
-cosa3 = sym.Symbol('cos(alpha3)')
 
-# wheelForward = sym.Matrix([[sina1, sina2, sina3],
-# 				   [cosa1, cosa2, cosa3],
-# 				   [1, 1, 1]])
-# # wheelInv = wheelForward.inv()
-# # print(wheelInv)
+sint1 = sym.Symbol('sin(theta1)')
+sint2 = sym.Symbol('sin(theta2)')
+sint3 = sym.Symbol('sin(theta3)')
+sint4 = sym.Symbol('sin(theta4)')
+sint5 = sym.Symbol('sin(theta5)')
+sint6 = sym.Symbol('sin(theta6)')
+cost1 = sym.Symbol('cos(theta1)')
+cost2 = sym.Symbol('cos(theta2)')
+cost3 = sym.Symbol('cos(theta3)')
+cost4 = sym.Symbol('cos(theta4)')
+cost5 = sym.Symbol('cos(theta5)')
+cost6 = sym.Symbol('cos(theta6)')
 
-# alpha1 = 5
-# alpha2 = 3
-# alpha3 = 1
+sinA = sym.Symbol('sin(A)')
+sinB = sym.Symbol('sin(B)')
+sinG = sym.Symbol('sin(G)')
+cosA = sym.Symbol('cos(A)')
+cosB = sym.Symbol('cos(B)')
+cosG = sym.Symbol('cos(G)')
 
-# wheelInvMatrix = np.array([[-(cos(alpha2) - cos(alpha3))/((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))), (-(-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) + (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2)) - (cos(alpha2) - cos(alpha3))*(sin(alpha1) - sin(alpha2)))/((-cos(alpha1) + cos(alpha2))*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2)))), (cos(alpha2)*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))) - (cos(alpha2) - cos(alpha3))*(cos(alpha1)*(-sin(alpha1) + sin(alpha2)) - sin(alpha1)*(-cos(alpha1) + cos(alpha2))))/((-cos(alpha1) + cos(alpha2))*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))))],
-# [-(-cos(alpha1) + cos(alpha3))/((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))), ((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2)) - (-cos(alpha1) + cos(alpha3))*(sin(alpha1) - sin(alpha2)))/((-cos(alpha1) + cos(alpha2))*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2)))), (-cos(alpha1)*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))) - (-cos(alpha1) + cos(alpha3))*(cos(alpha1)*(-sin(alpha1) + sin(alpha2)) - sin(alpha1)*(-cos(alpha1) + cos(alpha2))))/((-cos(alpha1) + cos(alpha2))*((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))))],
-# [(-cos(alpha1) + cos(alpha2))/((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))), (sin(alpha1) - sin(alpha2))/((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2))), (cos(alpha1)*(-sin(alpha1) + sin(alpha2)) - sin(alpha1)*(-cos(alpha1) + cos(alpha2)))/((-cos(alpha1) + cos(alpha2))*(-sin(alpha1) + sin(alpha3)) - (-cos(alpha1) + cos(alpha3))*(-sin(alpha1) + sin(alpha2)))]])
+# XYX wrist rotation matrix (used in forward kinematics)
+c34 = sym.Matrix([[1, 0, 0], 
+				[0, cost4, -sint4], 
+				[0, sint4, cost4]]) 
+c45 = sym.Matrix([[cost5, 0, sint5], 
+				[0, 1, 0], 
+				[-sint5, 0, cost5]])
+c56 = sym.Matrix([[1, 0, 0],
+				[0, cost6, -sint6],
+				[0, sint6, cost6]])
 
-# print(wheelInvMatrix)
-
-
-sint0 = sym.Symbol('sin(theta[0])')
-sint1 = sym.Symbol('sin(theta[1])')
-sint2 = sym.Symbol('sin(theta[2])')
-sint3 = sym.Symbol('sin(theta[3])')
-sint4 = sym.Symbol('sin(theta[4])')
-sint5 = sym.Symbol('sin(theta[5])')
-cost0 = sym.Symbol('cos(theta[0])')
-cost1 = sym.Symbol('cos(theta[1])')
-cost2 = sym.Symbol('cos(theta[2])')
-cost3 = sym.Symbol('cos(theta[3])')
-cost4 = sym.Symbol('cos(theta[4])')
-cost5 = sym.Symbol('cos(theta[5])')
-
-# YZY wrist rotation matrix (used in forward kinematics)
-t34 = np.array([[cost3, 0, sint3],
-                [0, 1, 0],
-                [-sint3, 0, cost3]])
-t45 = np.array([[cost4, -sint4, 0],
-                [sint4, cost4, 0],
-                [0, 0, 1]])
-t56 = np.array([[cost5, 0, sint5],
-                [0, 1, 0],
-                [-sint5, 0, cost5]])
-
-c36 = t34 @ t45 @ t56
+c36 = c34 @ c45 @ c56
 
 # these are the variables we're solving for (theta4, 5, 6)
+print("c36: ")
 print(c36) # c36 equation
-# [[cos(theta4)*cos(theta5)*cos(theta6) - sin(theta4)*sin(theta6),  -cos(theta4)*sin(theta5), cos(theta4)*cos(theta5)*sin(theta6) + cos(theta6)*sin(theta4)],
-#  [cos(theta6)*sin(theta5), 									    cos(theta5),			  sin(theta5)*sin(theta6)],
-#  [-cos(theta4)*sin(theta6) - cos(theta5)*cos(theta6)*sin(theta4), sin(theta4)*sin(theta5),  cos(theta4)*cos(theta6) - cos(theta5)*sin(theta4)*sin(theta6)]]
 
-# theta5 = np.arccos(rot_mat_3_6[1][1])
-# theta4 = -np.arccos(rot_mat_3_6[0][1]/np.sin(theta5))
-# theta6 = np.arccos(rot_mat_3_6[1][0]/np.sin(theta5))
+# Matrix([[cos(theta5), sin(theta5)*sin(theta6), cos(theta6)*sin(theta5)], 
+# 		  [sin(theta4)*sin(theta5), cos(theta4)*cos(theta6) - cos(theta5)*sin(theta4)*sin(theta6), -cos(theta4)*sin(theta6) - cos(theta5)*cos(theta6)*sin(theta4)], 
+# 		  [-cos(theta4)*sin(theta5), cos(theta4)*cos(theta5)*sin(theta6) + cos(theta6)*sin(theta4), cos(theta4)*cos(theta5)*cos(theta6) - sin(theta4)*sin(theta6)]])
+
+# theta5 = np.arccos(rot_mat_3_6[0][0])
+# theta6 = np.arcsin(rot_mat_3_6[0][1]/np.sin(theta5))
+# theta4 = np.arcsin(rot_mat_3_6[1][0]/np.sin(theta5))
 
 
 # these are the variables we know (alpha, beta, gamma, theta1, theta2, theta3)
 # XYZ rotation matrix for end effector
 
-x = np.array([[1, 0, 0],
-                [0, cost3, -sint3],
-                [0, sint3, cost3]])
-y = np.array([[cost4, 0, sint4],
-                [0, 1, 0],
-                [-sint4, 0, cost4]])
-z = np.array([[cost5, -sint5, 0],
-                [sint5, cost5, 0],
-                [0, 0, 1]])
-print("")
+x = sym.Matrix([[1, 0, 0],
+			[0, cosA, -sinA],
+			[0, sinA, cosA]])
+y = sym.Matrix([[cosB, 0, sinB],
+			[0, 1, 0],
+			[-sinB, 0, cosB]])
+z = sym.Matrix([[cosG, -sinG, 0],
+			[sinG, cosG, 0],
+			[0, 0, 1]])
+print("r06: ")
 r06 = x @ y @ z
 print(r06)
 
-# [[cos(beta)*cos(gamma), -cos(beta)*sin(gamma), sin(beta)],
-#  [cos(alpha)*sin(gamma) + cos(gamma)*sin(alpha)*sin(beta), cos(alpha)*cos(gamma) - sin(alpha)*sin(beta)*sin(gamma), -cos(beta)*sin(alpha)],
-#  [-cos(alpha)*cos(gamma)*sin(beta) + sin(alpha)*sin(gamma), cos(alpha)*sin(beta)*sin(gamma) + cos(gamma)*sin(alpha), cos(alpha)*cos(beta)]]
+# x@y@z
+# ([[cos(B)*cos(G), -cos(B)*sin(G), sin(B)], 
+# [cos(A)*sin(G) + cos(G)*sin(A)*sin(B), cos(A)*cos(G) - sin(A)*sin(B)*sin(G), -cos(B)*sin(A)], 
+# [-cos(A)*cos(G)*sin(B) + sin(A)*sin(G), cos(A)*sin(B)*sin(G) + cos(G)*sin(A), cos(A)*cos(B)]])
 
 
 # r36 calculated by r36 = (r03)^-1 @ r06
 
-
 # r03
-r01 = np.array([[cost0, -sint0, 0],
-				[sint0, cost0, 0],
+r01 = sym.Matrix([[cost1, -sint1, 0], 
+				[sint1, cost1, 0], 
 				[0, 0, 1]])
-r12 = np.array([[cost1 - np.pi/2, -sint1 - np.pi/2, 0],
-				[0, 0, 1],
-				[-sint1 - np.pi/2, -cost1 - np.pi/2, 0]])
-r23 = np.array([[cost2, -sint2, 0],
-				[sint2, cost2, 0],
-				[0, 0, 1]])
+r12 = sym.Matrix([[cost2, 0, sint2],
+				[0, 1, 0],
+				[-sint2, 0, cost2]])
+r23 = sym.Matrix([[cost3, 0, sint3],
+				[0, 1, 0],
+				[-sint3, 0, cost3]]) 
 
 r03 = r01 @ r12 @ r23
-print("")
+print("r03: ")
 print(r03)
 
-# np.array([[cos(theta[0])*cos(theta[2])*(cos(theta[1]) - np.pi/2) + cos(theta[0])*sin(theta[2])*(-sin(theta[1]) - np.pi/2), cos(theta[0])*cos(theta[2])*(-sin(theta[1]) - np.pi/2) - cos(theta[0])*sin(theta[2])*(cos(theta[1]) - np.pi/2), -sin(theta[0])],
-# 		  [cos(theta[2])*sin(theta[0])*(cos(theta[1]) - np.pi/2) + sin(theta[0])*sin(theta[2])*(-sin(theta[1]) - np.pi/2), cos(theta[2])*sin(theta[0])*(-sin(theta[1]) - np.pi/2) - sin(theta[0])*sin(theta[2])*(cos(theta[1]) - np.pi/2), cos(theta[0])],
-# 		  [cos(theta[2])*(-sin(theta[1]) - np.pi/2) + sin(theta[2])*(-cos(theta[1]) - np.pi/2), cos(theta[2])*(-cos(theta[1]) - np.pi/2) - sin(theta[2])*(-sin(theta[1]) - np.pi/2), 0]])
+# [[cos(theta[0])*cos(theta[1])*cos(theta[2]) - cos(theta[0])*sin(theta[1])*sin(theta[2]), 	-sin(theta[0]), cos(theta[0])*cos(theta[1])*sin(theta[2]) + cos(theta[0])*cos(theta[2])*sin(theta[1])], 
+#  [cos(theta[1])*cos(theta[2])*sin(theta[0]) - sin(theta[0])*sin(theta[1])*sin(theta[2]), 	cos(theta[0]), 	cos(theta[1])*sin(theta[0])*sin(theta[2]) + cos(theta[2])*sin(theta[0])*sin(theta[1])], 
+#  [-cos(theta[1])*sin(theta[2]) - cos(theta[2])*sin(theta[1]), 								0, 			cos(theta[1])*cos(theta[2]) - sin(theta[1])*sin(theta[2])]
+
+# [[cos(theta1)*cos(theta2)*cos(theta3) - cos(theta1)*sin(theta2)*sin(theta3), -sin(theta1), cos(theta1)*cos(theta2)*sin(theta3) + cos(theta1)*cos(theta3)*sin(theta2)], 
+#  [cos(theta2)*cos(theta3)*sin(theta1) - sin(theta1)*sin(theta2)*sin(theta3), cos(theta1), cos(theta2)*sin(theta1)*sin(theta3) + cos(theta3)*sin(theta1)*sin(theta2)], 
+#  [-cos(theta2)*sin(theta3) - cos(theta3)*sin(theta2), 0, cos(theta2)*cos(theta3) - sin(theta2)*sin(theta3)]]
