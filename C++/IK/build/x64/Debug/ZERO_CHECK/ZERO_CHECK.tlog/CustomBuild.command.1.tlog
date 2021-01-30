@@ -1,0 +1,10 @@
+^C:\USERS\SAM SCHOEDEL\DESKTOP\GIT\ARTICULATED-ARM\C++\IK\BUILD\CMAKEFILES\45F1060FCFBF524CE485336676594891\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK" "-BC:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK/build/inverse_pose.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

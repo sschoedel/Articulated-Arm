@@ -1,0 +1,10 @@
+^C:\USERS\SAM SCHOEDEL\DESKTOP\GIT\ARTICULATED-ARM\C++\IK\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK" "-BC:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK/build" --check-stamp-file "C:/Users/Sam Schoedel/Desktop/git/Articulated-Arm/C++/IK/build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 from matplotlib.widgets import Slider, Button, TextBox
+import timeit
 
 plt.style.use('seaborn-whitegrid')
 
@@ -58,6 +59,7 @@ def updateFromSlider(val):
 	# 						  [-np.cos(A)*np.cos(G)*np.sin(B) + np.sin(A)*np.sin(G), np.cos(A)*np.sin(B)*np.sin(G) + np.cos(G)*np.sin(A), np.cos(A)*np.cos(B), endPosition[2]],
 	# 						  [0, 0, 0, 1]])
 
+	# start = timeit.timeit()
 	
 	transform0End = np.array([[np.cos(B)*np.cos(G), -np.cos(B)*np.sin(G), np.sin(B), endPosition[0]], 
 							  [np.cos(A)*np.sin(G) + np.cos(G)*np.sin(A)*np.sin(B), np.cos(A)*np.cos(G) - np.sin(A)*np.sin(B)*np.sin(G), -np.cos(B)*np.sin(A), endPosition[1]], 
@@ -128,7 +130,9 @@ def updateFromSlider(val):
 							[np.cos(theta2)*np.cos(theta3)*np.sin(theta1) - np.sin(theta1)*np.sin(theta2)*np.sin(theta3), np.cos(theta1), np.cos(theta2)*np.sin(theta1)*np.sin(theta3) + np.cos(theta3)*np.sin(theta1)*np.sin(theta2)], 
 							[-np.cos(theta2)*np.sin(theta3) - np.cos(theta3)*np.sin(theta2), 0, np.cos(theta2)*np.cos(theta3) - np.sin(theta2)*np.sin(theta3)]])
 
-	inv_rot_mat_0_3 = np.linalg.inv(rot_mat_0_3)
+	# inv_rot_mat_0_3 = np.linalg.inv(rot_mat_0_3)
+	inv_rot_mat_0_3 = np.transpose(rot_mat_0_3)
+ 
 	rot_mat_3_6 = inv_rot_mat_0_3 @ rot_mat_0_6
 
 	theta5 = np.arccos(rot_mat_3_6[0,0])
@@ -245,6 +249,9 @@ def updateFromSlider(val):
 		theta6 = theta6_2
 		baseTransforms = baseTransforms2
 		
+	# end = timeit.timeit()
+	# print(f'{end-start} seconds elapsed')
+ 
 	print(f'theta123: {[theta1, theta2, theta3, theta4, theta5, theta6]}')
 
 	# Extract position and rotation data for each joint
