@@ -310,8 +310,7 @@ def start(text):
 	for i in range(N):
 		drawEverything(jointPositionMat[i])
 		print(jointPositionMat[i])
-		print("pos {}".format(i+1))
-		plt.pause(0.005)
+		print("pos {}".format(i+1))T
 	# reset everything TODO fix errors this might be causing
 	thetastart = thetaend
 	thetaend = np.zeros(6)
